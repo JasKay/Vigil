@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vigil prototype</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#eef1f4; --panel:#ffffff; --ink:#15202b; --muted:#66727f; --line:#dde3e9;
+  --brand:#0f3d3e; --brand-ink:#ffffff;
+  --high:#c0392b; --high-bg:#fbe7e4; --med:#a86400; --med-bg:#fdf0d9; --norm:#3b5b73; --norm-bg:#e4edf3; --pend:#66727f; --pend-bg:#eceff2;
+  --wa-bg:#e9e2d6; --wa-out:#d9fdd3; --wa-in:#ffffff; --wa-head:#0b5c4d; --op:#e6e9ff;
+  --font:"Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f151b; --panel:#171f27; --ink:#e7edf2; --muted:#93a0ac; --line:#2a3541;
+    --brand:#7fd1c7; --brand-ink:#0b1417;
+    --high:#ff8a7a; --high-bg:#3a1f1c; --med:#f0b45a; --med-bg:#372a12; --norm:#8db6d1; --norm-bg:#1c2c38; --pend:#93a0ac; --pend-bg:#222c36;
+    --wa-bg:#0c1418; --wa-out:#144d37; --wa-in:#1f2c34; --wa-head:#1f2c34; --op:#2a3157;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f151b; --panel:#171f27; --ink:#e7edf2; --muted:#93a0ac; --line:#2a3541;
+  --brand:#7fd1c7; --brand-ink:#0b1417;
+  --high:#ff8a7a; --high-bg:#3a1f1c; --med:#f0b45a; --med-bg:#372a12; --norm:#8db6d1; --norm-bg:#1c2c38; --pend:#93a0ac; --pend-bg:#222c36;
+  --wa-bg:#0c1418; --wa-out:#144d37; --wa-in:#1f2c34; --wa-head:#1f2c34; --op:#2a3157;
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+.app{display:flex;flex-direction:column;height:100%}
+.banner{background:#f5c542;color:#2b2200;text-align:center;font-size:13px;font-weight:600;padding:6px 12px}
+.tabs{display:none;background:var(--panel);border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;padding:12px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--brand)}
+.tabs .badge{display:inline-block;min-width:18px;padding:0 6px;margin-left:6px;border-radius:9px;background:var(--high);color:#fff;font-size:12px}
+.main{flex:1;min-height:0;display:grid;grid-template-columns:400px 1fr;gap:20px;padding:20px}
+.pane{min-height:0;display:flex;flex-direction:column}
+.label{font-size:13px;color:var(--muted);margin:0 0 8px 2px}
+
+/* WhatsApp side */
+.phone{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--wa-bg);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,.12)}
+.wa-head{background:var(--wa-head);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px}
+.avatar{width:36px;height:36px;border-radius:50%;background:#e8f5f1;color:#0b5c4d;display:grid;place-items:center;font-weight:700}
+.wa-head .t{font-weight:600;line-height:1.15}
+.wa-head .s{font-size:12px;opacity:.8}
+.wa-head .grow{flex:1}
+.ghost{background:rgba(255,255,255,.14);border:0;color:#fff;border-radius:8px;padding:6px 10px;font-size:12px}
+.chat{flex:1;min-height:0;overflow-y:auto;padding:12px 12px 6px;display:flex;flex-direction:column;gap:6px}
+.msg{max-width:82%;padding:7px 10px 5px;border-radius:10px;white-space:pre-wrap;word-wrap:break-word;box-shadow:0 1px 1px rgba(0,0,0,.12);font-size:14.5px}
+.msg .time{display:block;text-align:right;font-size:11px;color:var(--muted);margin-top:2px}
+.msg.user{align-self:flex-end;background:var(--wa-out);border-top-right-radius:2px;color:#111}
+.msg.bot{align-self:flex-start;background:var(--wa-in);border-top-left-radius:2px}
+.msg.operator{align-self:flex-start;background:var(--op);border-top-left-radius:2px}
+.msg .who{display:block;font-size:12px;font-weight:700;color:#3a49b8;margin-bottom:2px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .msg.user{color:#e7edf2}}
+:root[data-theme="dark"] .msg.user{color:#e7edf2}
+.sys{align-self:center;background:rgba(0,0,0,.08);color:var(--muted);font-size:12px;border-radius:8px;padding:3px 10px;text-align:center}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:4px 12px 8px}
+.chip{background:var(--wa-in);border:1px solid var(--line);border-radius:16px;padding:5px 12px;font-size:13px}
+.compose{display:flex;gap:8px;padding:8px;background:var(--wa-bg);border-top:1px solid rgba(0,0,0,.06)}
+.compose input{flex:1;min-width:0;border:0;border-radius:22px;padding:10px 14px;background:var(--wa-in)}
+.send{width:42px;height:42px;border-radius:50%;border:0;background:#0b8a6a;color:#fff;font-size:18px}
+.pin{width:42px;height:42px;border-radius:50%;border:0;background:var(--wa-in);font-size:16px}
+
+/* Dashboard side */
+.dash{flex:1;min-height:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;overflow:hidden}
+.dash-head{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.dash-head h1{font-size:18px;margin:0;font-weight:700;letter-spacing:-.01em}
+.dash-head .sub{color:var(--muted);font-size:13px}
+.dash-head .grow{flex:1}
+.body{flex:1;min-height:0;overflow-y:auto}
+.rows{display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:96px 92px 1fr 104px 84px;gap:12px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);background:none;border-left:0;border-right:0;border-top:0;text-align:left;width:100%}
+.row:hover{background:var(--bg)}
+.row.head{font-size:12.5px;color:var(--muted);font-weight:600;cursor:default;padding-top:9px;padding-bottom:9px}
+.row.head:hover{background:none}
+.num{font-weight:700;font-variant-numeric:tabular-nums}
+.loc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.muted{color:var(--muted)}
+.pill{display:inline-block;padding:2px 9px;border-radius:10px;font-size:12.5px;font-weight:600}
+.p-High{background:var(--high-bg);color:var(--high)}
+.p-Medium{background:var(--med-bg);color:var(--med)}
+.p-Normal{background:var(--norm-bg);color:var(--norm)}
+.p-Pending{background:var(--pend-bg);color:var(--pend)}
+.st{font-size:13px}
+.empty{padding:48px 24px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:6px}
+
+.detail{padding:16px 18px 24px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.detail .full{grid-column:1/-1}
+.back{background:none;border:0;color:var(--brand);font-weight:600;padding:0;margin-bottom:6px}
+.dtitle{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dtitle h2{margin:0;font-size:22px;letter-spacing:-.01em}
+.card{border:1px solid var(--line);border-radius:12px;padding:14px}
+.card h3{margin:0 0 10px;font-size:14px}
+dl{margin:0;display:grid;grid-template-columns:120px 1fr;gap:8px 10px;font-size:14px}
+dt{color:var(--muted)}
+dd{margin:0;word-break:break-word}
+.convo{max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;background:var(--wa-bg);border-radius:10px;padding:10px}
+.convo .msg{max-width:88%;font-size:13.5px;color:#111}
+.convo .msg.bot,.convo .msg.operator{color:var(--ink)}
+:root[data-theme="dark"] .convo .msg.user{color:#e7edf2}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .convo .msg.user{color:#e7edf2}}
+select,textarea,.field{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:var(--panel)}
+textarea{resize:vertical;min-height:64px}
+.btn{background:var(--brand);color:var(--brand-ink);border:0;border-radius:8px;padding:9px 14px;font-weight:600}
+.btn.alt{background:none;color:var(--ink);border:1px solid var(--line)}
+.btn.on{background:var(--high);color:#fff}
+.stack{display:flex;flex-direction:column;gap:8px}
+.inline{display:flex;gap:8px}
+.timeline{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.timeline li{border-left:3px solid var(--line);padding-left:10px;font-size:13.5px}
+.timeline .when{color:var(--muted);font-size:12px}
+.note-tag{font-weight:600}
+.hint{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+
+@media (max-width:900px){
+  .tabs{display:flex}
+  .main{grid-template-columns:1fr;padding:10px;gap:0}
+  .pane{display:none}
+  body[data-tab="chat"] #paneChat{display:flex}
+  body[data-tab="dash"] #paneDash{display:flex}
+  .label{display:none}
+  .row{grid-template-columns:1fr auto;grid-template-areas:"num pri" "loc st";gap:4px 10px}
+  .row.head{display:none}
+  .row .c-num{grid-area:num}.row .c-pri{grid-area:pri;justify-self:end}
+  .row .c-loc{grid-area:loc}.row .c-st{grid-area:st;justify-self:end}
+  .row .c-time{display:none}
+  .detail{grid-template-columns:1fr}
+  dl{grid-template-columns:104px 1fr}
+}
+@media (prefers-reduced-motion:no-preference){
+  .msg{animation:pop .16s ease-out}
+  @keyframes pop{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+}
+</style>
+</head>
+<body data-tab="chat">
+<div class="app">
+  <div class="banner">Vigil prototype. Simulated WhatsApp, test data only. Do not enter real reports.</div>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tabChat" aria-selected="true">WhatsApp</button>
+    <button role="tab" id="tabDash" aria-selected="false">Operator dashboard <span class="badge" id="tabBadge" hidden>0</span></button>
+  </div>
+  <div class="main">
+    <section class="pane" id="paneChat">
+      <p class="label">What the person reporting sees</p>
+      <div class="phone">
+        <div class="wa-head">
+          <div class="avatar">V</div>
+          <div class="grow"><div class="t">Vigil</div><div class="s" id="waSub">Prototype line</div></div>
+          <button class="ghost" id="newReporter" title="Start as a different person">New reporter</button>
+        </div>
+        <div class="chat" id="chat" aria-live="polite"></div>
+        <div class="chips" id="chips"></div>
+        <form class="compose" id="composeForm" autocomplete="off">
+          <button type="button" class="pin" id="pinBtn" title="Send a location pin" aria-label="Send a location pin">&#128205;</button>
+          <input id="composeInput" placeholder="Message" aria-label="Message">
+          <button class="send" aria-label="Send">&#10148;</button>
+        </form>
+      </div>
+    </section>
+    <section class="pane" id="paneDash">
+      <p class="label">What the Vigil operator sees</p>
+      <div class="dash">
+        <div class="dash-head">
+          <div class="grow"><h1>Vigil cases</h1><div class="sub">Private. Reported urgency only, not an assessment.</div></div>
+        </div>
+        <div class="body" id="dashBody"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function(){
+  var STATUSES=["New","Reviewing","Assigned","In Progress","Resolved","Closed"];
+  var cases=[], counter=0, selectedId=null, activeCase=null, reporterN=1;
+  var draftNote="", draftReply="", draftStatus=null;
+  var $=function(id){return document.getElementById(id)};
+  function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+  function tm(d){return d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}
+  function dt(d){return d.toLocaleDateString([], {month:"short",day:"numeric"})+" "+tm(d)}
+  function waNumber(){return "+234 80"+(1000000+reporterN*7391).toString().slice(0,7).replace(/(\d{3})(\d{4})/,"$1 $2")}
+  var currentWa=waNumber();
+
+  /* ---------- Conversation logic (this becomes the webhook handler later) ---------- */
+  var norm=function(t){return t.trim().toLowerCase().replace(/[.!?,]+$/,"")};
+  function isNotSure(t){return /^(3|not sure|unsure|i'?m not sure|im not sure|i don'?t know|idk|dont know|don'?t know|maybe|no idea)/.test(t)}
+  function isYes(t){return /^(1|yes|yeah|yep|yup|y|sure|yes please|ye|yea)\b/.test(t)}
+  function isNo(t){return /^(2|no|nope|nah|n|not really)$/.test(t)||/^no\b(?! idea)/.test(t)&&!/^no idea/.test(t)&&!/^not sure/.test(t)}
+  function isGreeting(t){return /^(hi|hello|hey|hola|good (morning|afternoon|evening)|help)\W*$/.test(t)||t.split(/\s+/).length<=2&&!/[0-9]/.test(t)&&/^(hi|hello|hey|hola|help|hi there|hello there)/.test(t)}
+  function priorityOf(c){return c.danger==="Yes"?"High":c.danger==="Not sure"?"Medium":c.danger==="No"?"Normal":"Pending"}
+
+  var Q={
+    intro:"Hi, I'm Vigil. I can help you report a child-safety concern.\n\n(Prototype: test conversation only.)",
+    danger:"Is the child in immediate danger right now?\n\n1. Yes\n2. No\n3. I'm not sure",
+    dangerRetry:"Sorry, I didn't catch that. Is the child in immediate danger right now?\n\nReply 1 for Yes, 2 for No, or 3 if you're not sure.",
+    location:"Where is the child?\n\nYou can send a location, address, landmark, or describe where they are.",
+    description:"Please briefly describe what you saw or what you are concerned about.",
+    age:"If you know, approximately how old is the child?\n\nYou can reply \"I don't know.\"",
+    anon:"Would you like to remain anonymous?\n\n1. Yes\n2. No",
+    anonRetry:"Sorry, I didn't catch that. Would you like to remain anonymous?\n\nReply 1 for Yes or 2 for No.",
+    name:"What name should we use?",
+    phone:"What phone number can we use to contact you?"
+  };
+
+  function newCase(wa){
+    counter++;
+    var c={id:counter,number:"VG-"+String(counter).padStart(6,"0"),status:"New",danger:null,location:null,lat:null,lng:null,
+      desc:null,age:null,ageAsked:false,anon:null,name:null,phone:null,wa:wa,created:new Date(),updated:new Date(),
+      complete:false,step:"start",takeover:false,messages:[],updates:[]};
+    cases.unshift(c);return c;
+  }
+  function log(c,dir,text){c.messages.push({dir:dir,text:text,at:new Date()});c.updated=new Date()}
+  function botSay(c,text,delay){
+    log(c,"out",text);
+  }
+
+  function handleIncoming(c,text,pin){
+    log(c,"in",text);
+    var t=norm(text);
+    var out=[];
+    if(c.complete){
+      if(!c.takeover){out.push("Thanks. We've added this to your report "+c.number+". A Vigil team member will see it.\n\nIf the child is in immediate danger, contact the appropriate emergency service immediately.")}
+      finish(c,out);return;
+    }
+    if(c.takeover){finish(c,out);return}
+
+    switch(c.step){
+      case "start":
+        out.push(Q.intro);
+        if(!isGreeting(t)){c.desc=text;out.push("Thank you for letting us know.")}
+        out.push(Q.danger);c.step="danger";break;
+      case "danger":
+        if(isNotSure(t)){c.danger="Not sure"}
+        else if(isYes(t)){c.danger="Yes"}
+        else if(isNo(t)){c.danger="No"}
+        else{out.push(Q.dangerRetry);break}
+        if(c.danger==="Yes"){out.push("Thank you. Vigil is a reporting service and cannot send help itself. If a child is in danger right now, please call your local emergency number as well.")}
+        out.push(Q.location);c.step="location";break;
+      case "location":
+        c.location=pin?"Shared location pin":text;
+        if(pin){c.lat=pin.lat;c.lng=pin.lng}
+        if(!c.desc){out.push(Q.description);c.step="description"}
+        else{out.push(Q.age);c.step="age"}
+        break;
+      case "description":
+        c.desc=text;out.push(Q.age);c.step="age";break;
+      case "age":
+        c.age=isNotSure(t)||/^(unknown|no idea|not known)/.test(t)?"Unknown":text;
+        out.push(Q.anon);c.step="anon";break;
+      case "anon":
+        if(isYes(t)){c.anon=true;complete(c,out)}
+        else if(isNo(t)){c.anon=false;out.push(Q.name);c.step="name"}
+        else{out.push(Q.anonRetry)}
+        break;
+      case "name":
+        c.name=text;out.push(Q.phone);c.step="phone";break;
+      case "phone":
+        c.phone=text;complete(c,out);break;
+    }
+    finish(c,out);
+  }
+  function complete(c,out){
+    c.complete=true;c.step="done";
+    c.updates.push({status:"New",note:"Report received via WhatsApp.",at:new Date()});
+    out.push("Thank you. Your report has been received.\n\nYour reference number is "+c.number+".\n\nA Vigil team member will review the report.\n\nIf the child is in immediate danger, contact the appropriate emergency service immediately.");
+  }
+  function finish(c,out){
+    out.forEach(function(m){botSay(c,m)});
+    renderAll();
+  }
+
+  /* ---------- Chat rendering ---------- */
+  function renderChat(){
+    var c=activeCase,el=$("chat");
+    var html='<div class="sys">Today</div>';
+    if(!c||!c.messages.length){html+='<div class="sys">Send a message to start. Try: "There is a young boy being beaten near Ikeja market."</div>'}
+    if(c){
+      c.messages.forEach(function(m){
+        var cls=m.dir==="in"?"user":m.dir==="op"?"operator":"bot";
+        html+='<div class="msg '+cls+'">'+(m.dir==="op"?'<span class="who">Vigil team</span>':'')+esc(m.text)+'<span class="time">'+tm(m.at)+'</span></div>';
+      });
+      if(c.takeover){html+='<div class="sys">A Vigil team member has joined this chat</div>'}
+    }
+    el.innerHTML=html;el.scrollTop=el.scrollHeight;
+    $("waSub").textContent=currentWa;
+    var chips=[];
+    if(c&&!c.complete&&!c.takeover){
+      if(c.step==="danger")chips=["1","2","3"];
+      else if(c.step==="age")chips=["I don't know","About 8"];
+      else if(c.step==="anon")chips=["1","2"];
+    }
+    if(!c)chips=["There is a young boy being beaten near Ikeja market","Hi"];
+    $("chips").innerHTML=chips.map(function(x){return '<button type="button" class="chip" data-q="'+esc(x)+'">'+esc(x)+'</button>'}).join("");
+  }
+  function send(text,pin){
+    text=text.trim();if(!text)return;
+    if(!activeCase)activeCase=newCase(currentWa);
+    handleIncoming(activeCase,text,pin);
+  }
+  $("composeForm").addEventListener("submit",function(e){e.preventDefault();var i=$("composeInput");var v=i.value;i.value="";send(v)});
+  $("chips").addEventListener("click",function(e){var b=e.target.closest(".chip");if(b)send(b.getAttribute("data-q"))});
+  $("pinBtn").addEventListener("click",function(){
+    var c=activeCase;
+    if(c&&!c.complete&&c.step!=="location"){send("(Shared a location pin)");return}
+    send("Location: 6.6018, 3.3515",{lat:6.6018,lng:3.3515});
+  });
+  $("newReporter").addEventListener("click",function(){reporterN++;currentWa=waNumber();activeCase=null;renderChat()});
+
+  /* ---------- Dashboard ---------- */
+  function locText(c){return c.location||"Not given yet"}
+  function renderDash(){
+    var body=$("dashBody");
+    var c=cases.filter(function(x){return x.id===selectedId})[0];
+    if(c){body.innerHTML=detailHtml(c);bindDetail(c);return}
+    if(!cases.length){body.innerHTML='<div class="empty"><b>No cases yet</b>Send a message from the WhatsApp side and the case appears here.</div>';return}
+    var h='<div class="rows"><div class="row head"><div>Case</div><div>Priority</div><div>Location</div><div>Status</div><div>Created</div></div>';
+    cases.forEach(function(x){
+      var p=priorityOf(x);
+      h+='<button class="row" data-id="'+x.id+'"><div class="c-num num">'+x.number+(x.complete?'':' <span class="muted" style="font-weight:400">(incomplete)</span>')+'</div>'
+        +'<div class="c-pri"><span class="pill p-'+p+'">'+p+'</span></div>'
+        +'<div class="c-loc loc'+(x.location?'':' muted')+'">'+esc(locText(x))+'</div>'
+        +'<div class="c-st st">'+x.status+'</div>'
+        +'<div class="c-time muted st">'+dt(x.created)+'</div></button>';
+    });
+    body.innerHTML=h+'</div>';
+    Array.prototype.forEach.call(body.querySelectorAll(".row[data-id]"),function(r){r.addEventListener("click",function(){selectedId=+r.getAttribute("data-id");draftNote="";draftReply="";draftStatus=null;renderDash()})});
+  }
+  function detailHtml(c){
+    var p=priorityOf(c);
+    var convo=c.messages.map(function(m){
+      var cls=m.dir==="in"?"user":m.dir==="op"?"operator":"bot";
+      return '<div class="msg '+cls+'">'+(m.dir==="op"?'<span class="who">Operator</span>':'')+esc(m.text)+'<span class="time">'+tm(m.at)+'</span></div>';
+    }).join("");
+    var rep=c.anon===true?'Anonymous':c.anon===false?esc(c.name||"Name pending")+'<br>'+esc(c.phone||"Phone pending"):'<span class="muted">Not asked yet</span>';
+    var coords=c.lat!=null?'<br><span class="muted">'+c.lat+', '+c.lng+'</span>':'';
+    var st=draftStatus||c.status;
+    var opts=STATUSES.map(function(s){return '<option'+(s===st?' selected':'')+'>'+s+'</option>'}).join("");
+    var tl=c.updates.slice().reverse().map(function(u){
+      return '<li><span class="note-tag">'+esc(u.status)+'</span> <span class="when">'+dt(u.at)+'</span><br>'+esc(u.note||"Status changed")+'</li>';
+    }).join("")||'<li class="muted">No updates yet.</li>';
+    return '<div class="detail">'
+      +'<div class="full"><button class="back" id="back">&larr; All cases</button>'
+      +'<div class="dtitle"><h2>'+c.number+'</h2><span class="pill p-'+p+'">'+p+' reported urgency</span><span class="pill p-Pending">'+c.status+'</span>'+(c.complete?'':'<span class="pill p-Medium">Incomplete report</span>')+'</div></div>'
+      +'<div class="card"><h3>Report</h3><dl>'
+        +'<dt>Immediate danger</dt><dd>'+(c.danger||'<span class="muted">Not answered</span>')+' <span class="muted">(as reported)</span></dd>'
+        +'<dt>Location</dt><dd>'+esc(locText(c))+coords+'</dd>'
+        +'<dt>Description</dt><dd>'+(c.desc?esc(c.desc):'<span class="muted">Not given yet</span>')+'</dd>'
+        +'<dt>Child\'s age</dt><dd>'+(c.age?esc(c.age):'<span class="muted">Not asked yet</span>')+'</dd>'
+        +'<dt>Reporter</dt><dd>'+rep+'</dd>'
+        +'<dt>WhatsApp</dt><dd>'+esc(c.wa)+'</dd>'
+      +'</dl></div>'
+      +'<div class="card"><h3>Status and notes</h3><div class="stack">'
+        +'<label class="muted" for="stSel">Status</label>'
+        +'<select id="stSel">'+opts+'</select>'
+        +'<label class="muted" for="noteTxt">Internal note (never sent to the reporter)</label>'
+        +'<textarea id="noteTxt" placeholder="What did you do or decide?">'+esc(draftNote)+'</textarea>'
+        +'<div class="inline"><button class="btn" id="saveUpd">Save update</button></div>'
+      +'</div></div>'
+      +'<div class="card"><h3>Conversation</h3><div class="convo" id="convo">'+convo+'</div>'
+        +'<div class="stack" style="margin-top:10px">'
+        +'<div class="inline"><button class="btn alt'+(c.takeover?' on':'')+'" id="takeBtn">'+(c.takeover?'Bot paused. Resume bot':'Take over conversation')+'</button></div>'
+        +(c.takeover?'<div class="inline"><input class="field" id="replyTxt" placeholder="Reply to reporter" value="'+esc(draftReply)+'"><button class="btn" id="replyBtn">Send</button></div><p class="hint">In the real build this sends via WhatsApp. Free-form replies work within 24 hours of the reporter\'s last message.</p>':'<p class="hint">Taking over pauses the bot so you can reply yourself.</p>')
+        +'</div></div>'
+      +'<div class="card"><h3>Case history</h3><ul class="timeline">'+tl+'</ul></div>'
+      +'</div>';
+  }
+  function bindDetail(c){
+    $("back").onclick=function(){selectedId=null;renderDash()};
+    var cv=$("convo");cv.scrollTop=cv.scrollHeight;
+    $("stSel").onchange=function(){draftStatus=this.value};
+    $("noteTxt").oninput=function(){draftNote=this.value};
+    $("saveUpd").onclick=function(){
+      var ns=$("stSel").value,note=draftNote.trim();
+      if(ns===c.status&&!note)return;
+      c.updates.push({status:ns,note:note||("Status changed to "+ns),at:new Date()});
+      c.status=ns;c.updated=new Date();draftNote="";draftStatus=null;renderDash();
+    };
+    $("takeBtn").onclick=function(){
+      c.takeover=!c.takeover;
+      c.updates.push({status:c.status,note:c.takeover?"Operator took over the conversation. Bot paused.":"Bot resumed.",at:new Date()});
+      renderAll();
+    };
+    var rb=$("replyBtn");
+    if(rb){
+      $("replyTxt").oninput=function(){draftReply=this.value};
+      var go=function(){var v=draftReply.trim();if(!v)return;log(c,"op",v);draftReply="";renderAll()};
+      rb.onclick=go;
+      $("replyTxt").onkeydown=function(e){if(e.key==="Enter"){e.preventDefault();go()}};
+    }
+  }
+
+  function renderBadge(){
+    var n=cases.filter(function(c){return c.status==="New"}).length;
+    var b=$("tabBadge");b.textContent=n;b.hidden=!n;
+  }
+  function renderAll(){renderChat();renderDash();renderBadge()}
+
+  /* tabs (small screens) */
+  function tab(t){
+    document.body.setAttribute("data-tab",t);
+    $("tabChat").setAttribute("aria-selected",t==="chat");
+    $("tabDash").setAttribute("aria-selected",t==="dash");
+  }
+  $("tabChat").onclick=function(){tab("chat")};
+  $("tabDash").onclick=function(){tab("dash")};
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
